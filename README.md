@@ -1,6 +1,6 @@
 # ◉ Orbis — crypto terminal in your browser
 
-**Live:** https://orbis-terminal.pages.dev &nbsp;·&nbsp; English / Русский &nbsp;·&nbsp; free, no sign-up, no API keys
+**Live:** https://orbis-n1t.pages.dev/ &nbsp;·&nbsp; English / Русский &nbsp;·&nbsp; free, no sign-up, no API keys
 
 Orbis is a lightweight trading terminal that runs entirely in the browser. It pulls public market data straight from exchanges and puts the things traders usually check in five different tabs — chart, liquidations, world markets, prediction markets, a backtester — on one screen.
 
