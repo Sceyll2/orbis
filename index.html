@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Orbis — крипто-терминал</title>
+<meta name="description" content="Orbis — бесплатный крипто-терминал в браузере: графики 5 бирж, карта ликвидаций, мировые рынки рядом с криптой, Polymarket и честный тестер стратегий. Без регистрации и ключей.">
+<meta property="og:title" content="Orbis — крипто-терминал">
+<meta property="og:description" content="Графики, карта ликвидаций, мировые рынки, Polymarket и тестер стратегий — бесплатно в браузере.">
+<meta name="theme-color" content="#131722">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23131722'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%232962ff' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='%23089981'/%3E%3C/svg%3E">
+<script src="js/i18n.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+// Telegram Mini App: к каждому запросу к нашему серверу (/api/...) прикладываем подпись Telegram — сервер пускает только владельца
+(function(){ const TG = window.Telegram && window.Telegram.WebApp;
+  if (!TG || !TG.initData) return;
+  TG.ready(); TG.expand(); try { TG.setHeaderColor("#1e222d"); TG.setBackgroundColor("#131722"); TG.disableVerticalSwipes && TG.disableVerticalSwipes(); } catch (e) {}
+  const f = window.fetch.bind(window);
+  window.fetch = (u, o = {}) => (typeof u === "string" && u.startsWith("/api/")) ? f(u, { ...o, headers:{ ...(o.headers || {}), "X-Tg-Init": TG.initData } }) : f(u, o);
+  document.documentElement.classList.add("tg");
+})();
+</script>
+<style>
+:root{--bg:#131722;--panel:#1e222d;--panel2:#171b26;--line:#2a2e39;--text:#d1d4dc;--muted:#787b86;--acc:#2962ff;--up:#089981;--down:#f23645;--hover:#2a2e39;--input:#0f1218}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;overflow:hidden}
+button,select,input{font:inherit;color:var(--text)}
+code{background:var(--panel2);padding:1px 5px;border-radius:3px}
+.app{display:grid;grid-template-rows:44px 1fr 26px;grid-template-columns:var(--toolsW,44px) 1fr var(--sideW,340px);height:100vh}
+body.side-hidden .app{--sideW:0px} body.side-hidden #side{display:none} body.tools-hidden .app{--toolsW:0px} body.tools-hidden #tools{display:none}
+#sideGrip{position:absolute;left:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:8} #sideGrip:hover,body.sresizing #sideGrip{background:linear-gradient(90deg,transparent 3px,#2962ff 3px,#2962ff 5px,transparent 5px)}
+body.sresizing,body.sresizing *{cursor:col-resize!important;user-select:none}
+#sideHide{margin-left:auto;background:none;border:0;color:#787b86;cursor:pointer;font-size:14px;padding:0 8px} #sideHide:hover{color:#d1d4dc}
+#sideShow{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:20;display:none;background:var(--panel);border:1px solid var(--line);border-right:0;border-radius:6px 0 0 6px;color:#b2b5be;padding:10px 4px;cursor:pointer;font-size:13px}
+body.side-hidden #sideShow{display:block}
+#toolsShow{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:20;display:none;background:var(--panel);border:1px solid var(--line);border-left:0;border-radius:0 6px 6px 0;color:#b2b5be;padding:10px 4px;cursor:pointer;font-size:13px}
+body.tools-hidden #toolsShow{display:block}
+@media (max-width:980px){ #sideGrip,#sideHide,#sideShow,#toolsShow{display:none!important} }
+#top{grid-column:1/4;display:flex;align-items:center;gap:6px;padding:0 8px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+#top::-webkit-scrollbar{display:none} #top > *{flex:0 0 auto}
+.logo{font-weight:700;letter-spacing:.3px;padding-right:6px;color:#fff;white-space:nowrap}
+.logo b{color:var(--acc)} .logo i{font-style:normal;font-weight:400;color:var(--muted);margin-left:4px}
+.tg-only{display:none} html.tg .tg-only{display:inline}
+.gl{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;font-size:12px;line-height:1.45;margin-top:6px} .gl b{color:#fff;font-weight:600}
+@media (max-width:600px){ .gl{grid-template-columns:1fr} .gl b{margin-top:6px} }
+.tb{background:transparent;border:0;border-radius:4px;padding:6px 8px;cursor:pointer;white-space:nowrap;color:var(--text)}
+.tb:hover{background:var(--hover)} .tb.on{color:#5b8cff;background:#1f2b4a}
+.vsep{width:1px;height:24px;background:var(--line);margin:0 4px;flex:0 0 auto}
+.symbox{display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.symbox select{background:transparent;border:0;padding:6px 4px 6px 8px;outline:none} .symbox select option,select option{background:var(--panel)}
+.symbox input{background:transparent;border:0;width:120px;padding:6px 8px;outline:none;text-transform:uppercase;font-weight:600}
+#tools{grid-row:2;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:2px;overflow-y:auto;scrollbar-width:none}
+#tools::-webkit-scrollbar{display:none}
+.tool{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:6px;background:transparent;cursor:pointer;color:var(--text);flex:0 0 auto}
+.tool:hover{background:var(--hover)} .tool.on{background:#1f2b4a;color:#5b8cff}
+.tool svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tsep{width:26px;height:1px;background:var(--line);margin:4px 0;flex:0 0 auto}
+#charts{grid-row:2;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg)}
+#mainPane{flex:1;position:relative;min-height:150px}
+#overlay{position:absolute;inset:0;pointer-events:none;z-index:3}
+#legend{position:absolute;left:10px;top:6px;z-index:4;font-size:12px;pointer-events:none;max-width:calc(100% - 100px)}
+#legend .sym{font-size:14px;font-weight:600;color:#fff}
+#legend .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:2px}
+#legend .ind{pointer-events:auto;display:inline-flex;gap:6px;align-items:center;background:rgba(19,23,34,.75);border-radius:4px;padding:1px 6px}
+.x,.cfg{cursor:pointer;color:var(--muted);padding:0 2px} .x:hover{color:var(--down)} .cfg:hover{color:#fff}
+.k{color:var(--muted)} .small{font-size:11px}
+.pane{position:relative;height:130px;border-top:1px solid var(--line);flex:0 0 auto}
+.pane-head{position:absolute;left:10px;top:4px;z-index:4;font-size:12px;display:flex;gap:8px;align-items:center;background:rgba(19,23,34,.75);padding:1px 6px;border-radius:4px}
+#status{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);z-index:5;color:var(--muted);font-size:14px;pointer-events:none;text-align:center}
+#hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:6;background:#1f2b4a;color:#cfe0ff;padding:5px 12px;border-radius:14px;font-size:12px;display:none;pointer-events:none}
+#tip{position:absolute;z-index:7;display:none;pointer-events:none;background:var(--panel);border:1px solid #363a45;border-radius:8px;padding:8px 10px;min-width:210px;max-width:290px;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+#tip .th{font-weight:600;color:#fff;margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+#tip .tr{display:flex;justify-content:space-between;gap:12px;line-height:1.55} #tip .tr span{color:var(--muted)} #tip .tr b{font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
+#liqInfo{position:absolute;left:8px;bottom:34px;z-index:6;display:none;background:rgba(19,23,34,.88);border:1px solid #2a2e39;border-radius:6px;padding:4px 9px;font-size:11.5px;color:#d1d4dc;pointer-events:none;max-width:calc(100% - 100px)}
+#btnLiq.on{color:#26c6da;background:rgba(38,198,218,.12)}
+#liqCtl{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:7;display:none;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;
+  background:rgba(19,23,34,.92);border:1px solid #2a2e39;border-radius:8px;padding:5px 12px;font-size:11.5px;color:#d1d4dc;max-width:calc(100% - 140px)}
+#charts{touch-action:none}
+@media (max-width:1500px) and (min-width:981px){ .tb .lbl{display:none} }
+#gridWrap{grid-row:2;grid-column:2;display:grid;min-width:0;min-height:0;gap:2px;background:#2a2e39}
+#gridWrap > #charts{grid-row:auto;grid-column:auto;min-width:0;min-height:0}
+#gridWrap.g1{grid-template-columns:minmax(0,1fr)} #gridWrap.g2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+#gridWrap.g3{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr)} #gridWrap.g3 > #charts{grid-row:1/3}
+#gridWrap.g4{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
+.mcell{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg)}
+.mhead{display:flex;align-items:center;gap:6px;padding:3px 6px;border-bottom:1px solid var(--line);font-size:12px;background:var(--panel)}
+.mhead .msym{width:96px;background:var(--input);border:1px solid var(--line);color:#d1d4dc;border-radius:4px;padding:2px 5px;font-weight:600}
+.mhead .mtf{background:var(--input);border:1px solid var(--line);color:#d1d4dc;border-radius:4px;padding:2px} .mhead .mpx{flex:1;text-align:right;color:#d1d4dc}
+.mhead .mmain{background:none;border:1px solid #363a45;color:#b2b5be;border-radius:4px;cursor:pointer} .mhead .mmain:hover{border-color:#2962ff;color:#fff}
+.mbody{flex:1;min-height:0;position:relative}
+#gmenu{position:fixed;z-index:60;display:none;width:230px;background:var(--panel);border:1px solid #363a45;border-radius:8px;padding:4px 0;box-shadow:0 10px 28px rgba(0,0,0,.55);font-size:12.5px}
+#gmenu .ci{padding:7px 14px;cursor:pointer} #gmenu .ci:hover{background:#2962ff;color:#fff}
+@media (max-width:980px){ #gridWrap{grid-column:1;grid-row:2} #btnGrid{display:none} }
+#btnReplay.on{color:#f7a600;background:rgba(247,166,0,.12)}
+#rpl{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);z-index:30;display:none;align-items:center;gap:6px;background:var(--panel);border:1px solid #f7a600;border-radius:8px;padding:5px 10px;box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:12px;white-space:nowrap}
+#rpl button{background:#2a2e39;border:1px solid #363a45;color:#d1d4dc;border-radius:5px;padding:3px 9px;cursor:pointer;font-size:12px} #rpl button:hover{border-color:#f7a600}
+#rpl select{background:var(--input);border:1px solid var(--line);color:#d1d4dc;border-radius:5px;padding:2px 4px;font-size:12px} #rpl .k{color:#b2b5be}
+#ctx{position:fixed;z-index:60;display:none;min-width:220px;background:var(--panel);border:1px solid #363a45;border-radius:8px;padding:4px 0;box-shadow:0 10px 28px rgba(0,0,0,.55);font-size:12.5px}
+#ctx .ci{padding:6px 14px;cursor:pointer;white-space:nowrap;color:#d1d4dc} #ctx .ci:hover{background:#2962ff;color:#fff}
+@media (max-width:980px){ #rpl{bottom:64px;max-width:calc(100% - 12px);overflow-x:auto} }
+.pane-grip{position:absolute;left:0;right:0;top:-4px;height:8px;z-index:6;cursor:row-resize}
+.pane-grip:hover,body.resizing .pane-grip{background:linear-gradient(transparent 3px,#2962ff 3px,#2962ff 5px,transparent 5px)}
+body.resizing,body.resizing *{cursor:row-resize!important;user-select:none}
+.pane.collapsed{overflow:hidden} .pane.collapsed .tv-lightweight-charts{visibility:hidden}
+.pane-head .pbtn{cursor:pointer;color:#787b86;font-size:10px;padding:0 2px} .pane-head .pbtn:hover{color:#d1d4dc}
+#psm{position:absolute;right:4px;bottom:30px;z-index:7;display:flex;gap:2px}
+#psm button{background:var(--panel);border:1px solid #363a45;color:#b2b5be;border-radius:4px;font-size:10.5px;padding:1px 5px;cursor:pointer}
+#psm button.on{color:#fff;border-color:#2962ff;background:rgba(41,98,255,.3)}
+#dtb{position:absolute;left:50%;top:44px;transform:translateX(-50%);z-index:9;display:none;align-items:center;gap:3px;flex-wrap:wrap;justify-content:center;
+  background:var(--panel);border:1px solid #363a45;border-radius:8px;padding:4px 6px;box-shadow:0 6px 20px rgba(0,0,0,.45);max-width:calc(100% - 120px)}
+#dtb .nm{font-size:11.5px;color:#b2b5be;margin:0 6px 0 2px;white-space:nowrap}
+#dtb button{background:transparent;border:1px solid transparent;color:#d1d4dc;border-radius:5px;min-width:24px;height:24px;cursor:pointer;font-size:12px;padding:0 4px}
+#dtb button:hover{background:#2a2e39} #dtb button.on{border-color:#2962ff;background:rgba(41,98,255,.15)}
+#dtb .sw{width:18px;min-width:18px;height:18px;border-radius:50%;border:2px solid transparent;padding:0} #dtb .sw.on{border-color:#fff}
+#dtb .cpick{display:inline-flex;width:18px;height:18px;border-radius:50%;overflow:hidden;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);cursor:pointer}
+#dtb .cpick input{opacity:0;width:18px;height:18px;cursor:pointer}
+#dtb .w i{display:block;width:16px;background:#d1d4dc;border-radius:2px;margin:auto} #dtb .sep{width:1px;height:18px;background:#363a45;margin:0 3px}
+#dtb .risk{font-size:11px;color:#b2b5be;display:flex;align-items:center;gap:3px} #dtb .risk input{width:52px;background:var(--input);border:1px solid var(--line);color:#d1d4dc;border-radius:4px;padding:2px 4px}
+#objList{position:fixed;left:52px;top:96px;z-index:40;display:none;width:min(380px,90vw);max-height:60vh;overflow:auto;background:var(--panel);border:1px solid #363a45;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:12px}
+#objList.show{display:block} #objList .oh{display:flex;align-items:center;gap:6px;padding:7px 9px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+#objList .oh button{margin-left:auto;background:none;border:0;color:#b2b5be;cursor:pointer}
+#objList .orow{display:flex;align-items:center;gap:6px;padding:5px 9px;cursor:pointer;border-bottom:1px solid #22262f} #objList .orow:hover,#objList .orow.on{background:#2a2e39}
+#objList .orow .dot{width:9px;height:9px;border-radius:50%;flex:none} #objList .orow .nm{white-space:nowrap} #objList .orow .k{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8a8f9c}
+#objList .orow button{background:none;border:0;color:#b2b5be;cursor:pointer;font-size:12px}
+@media (max-width:980px){ #dtb{top:auto;bottom:44px;max-width:calc(100% - 12px)} #objList{left:8px;top:auto;bottom:60px} }
+#liqUnder{position:absolute;inset:0;pointer-events:none;z-index:0;display:none}
+#mainPane > .tv-lightweight-charts{position:relative;z-index:1}
+#liqTip{position:absolute;z-index:8;display:none;pointer-events:none;background:rgba(19,23,34,.95);border:1px solid #2a2e39;border-radius:6px;padding:6px 9px;font-size:11.5px;line-height:1.55;color:#d1d4dc;box-shadow:0 6px 18px rgba(0,0,0,.4);white-space:nowrap}
+#liqTip .k{color:#8a8f9c}
+#liqCtl label{display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap} #liqCtl input[type=range]{width:80px}
+@media (max-width:980px){ #liqCtl{top:52px;left:8px;transform:none;max-width:calc(100% - 90px);gap:7px;font-size:11px;padding:3px 8px} #liqCtl input[type=range]{width:56px} }
+#lvl{position:absolute;right:92px;top:8px;z-index:6;display:none;background:var(--panel);border:1px solid #f7a600;border-radius:8px;padding:8px 10px;width:260px;font-size:12px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+#side{grid-row:2;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;position:relative;min-width:0}
+.tabs{display:flex;border-bottom:1px solid var(--line);flex:0 0 auto}
+.tabs button{flex:1;background:transparent;border:0;border-bottom:2px solid transparent;padding:9px 2px;cursor:pointer;color:var(--muted);font-size:12px}
+.tabs button.on{color:#fff;border-bottom-color:var(--acc)} .tabs button:hover{color:#fff}
+.tabbody{flex:1;min-height:0;display:none;flex-direction:column;overflow-y:auto}
+.sec{padding:10px 12px;border-bottom:1px solid var(--line)}
+.sec h4{margin:0 0 8px;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.sec label{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:12px}
+.sec label.col{flex-direction:column;align-items:stretch}
+.sec input,.sec select{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:5px 7px;outline:none;min-width:0}
+.sec input[type=number]{width:90px} .sec select{max-width:190px} .sec input[type=text]{width:100%}
+.btn{background:var(--hover);border:0;border-radius:5px;padding:6px 10px;cursor:pointer;margin:3px 3px 0 0} .btn:hover{background:#363a45}
+.btn.pri{background:var(--acc);color:#fff} .btn.pri:hover{background:#1e53e5} .btn:disabled{opacity:.5}
+.stat{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px dashed var(--line)} .stat span{color:var(--muted)}
+.verdict{margin:8px 0;padding:8px;border-radius:6px;background:var(--panel2);font-size:12px;line-height:1.45}
+.verdict.up{border-left:3px solid var(--up)} .verdict.down{border-left:3px solid var(--down)} .verdict.k{border-left:3px solid #f7a600;color:var(--text)}
+.note{font-size:11px;color:var(--muted);padding:8px 12px;line-height:1.45}
+.seg{display:flex;background:var(--panel2);border-radius:6px;padding:2px} .seg button{flex:1;border:0;background:transparent;padding:6px;border-radius:5px;cursor:pointer;color:var(--muted)} .seg button.on{background:#2a3350;color:#fff}
+.bh{margin:10px 0 4px;font-size:12px;color:#cfd3dc;display:flex;justify-content:space-between;align-items:center;gap:6px} .bh select{font-size:11px;padding:2px 4px}
+.crow{display:grid;grid-template-columns:auto 1fr auto;gap:4px;align-items:center;margin:4px 0;padding:5px;background:var(--panel2);border-radius:6px}
+.crow .ca{grid-column:1/4} .crow input,.crow select{width:100%;min-width:0;font-size:12px;padding:4px 5px;background:var(--input) !important}
+.btn.sm{font-size:11px;padding:3px 8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;margin-top:8px} .grid2 label{font-size:11px} .grid2 input{width:64px !important}
+#stScript{width:100%;background:var(--input);color:#e6e6e6;border:1px solid var(--line);border-radius:6px;padding:8px;font:12px/1.5 ui-monospace,Consolas,monospace;resize:vertical;margin-top:8px;outline:none}
+.chks{display:grid;grid-template-columns:1fr 1fr;gap:0 8px} label.chk{justify-content:flex-start !important;gap:6px !important;margin:2px 0 !important;font-size:11px !important} label.chk input{width:auto !important}
+details summary{cursor:pointer;margin:4px 0}
+.opd{display:flex;gap:4px;min-width:0} .opd .ok{flex:1 1 auto;min-width:0} .opd .on{width:62px !important;flex:0 0 62px} .opd .of{flex:1 1 auto}
+.crow{grid-template-columns:1fr auto !important} .crow .ca{grid-column:1/2 !important;grid-row:1} .crow .x{grid-column:2/3;grid-row:1}
+.crow .co{grid-column:1/3;grid-row:2} .crow .cb{grid-column:1/3;grid-row:3;min-width:0}
+.al{display:flex;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.al span:first-child{flex:1} .al .tgl{text-decoration:none;cursor:pointer;opacity:.85} .al .tgl:hover{opacity:1}
+.alform{display:flex;gap:4px;margin-top:6px} .alform input{flex:1;min-width:0} .alform select{flex:0 0 auto}
+.tl{font-size:11px;padding:3px 0;border-bottom:1px dashed var(--line);line-height:1.4}
+#toasts{position:fixed;right:16px;bottom:36px;z-index:80;display:flex;flex-direction:column;gap:8px;max-width:min(380px,90vw)}
+.toast{background:#1f2b4a;border:1px solid #2962ff;color:#e6edff;padding:10px 14px;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:13px;animation:tin .2s ease-out}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+.hk{line-height:2;font-size:12px} .hk b{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 6px;margin:0 4px 0 10px;font-weight:600}
+table.pm{width:100%;border-collapse:collapse;font-size:12px} table.pm th{color:var(--muted);font-weight:500;text-align:right;padding:4px 6px;position:sticky;top:0;background:var(--panel)}
+table.pm th:first-child,table.pm td:first-child{text-align:left} table.pm td{padding:3px 6px;text-align:right;border-bottom:1px solid #22262f;font-variant-numeric:tabular-nums}
+table.pm tr.grp td{background:var(--panel2);color:#cfd3dc;cursor:pointer;font-weight:600;padding-top:6px} table.pm tr.grp:hover td{background:var(--hover)}
+#wlist{flex:1;overflow-y:auto}
+.wrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:7px 12px;cursor:pointer;align-items:center;border-left:2px solid transparent}
+.wrow:hover{background:var(--hover)} .wrow.cur{border-left-color:var(--acc);background:#1c2233}
+.wrow .n{font-weight:600} .wrow .p{text-align:right;font-variant-numeric:tabular-nums} .wrow .c{text-align:right;min-width:58px;font-variant-numeric:tabular-nums}
+.wrow .rm{color:var(--muted);visibility:hidden;font-size:11px;margin-left:4px} .wrow:hover .rm{visibility:visible}
+.wadd{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--line)}
+.wadd input{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:5px 7px;text-transform:uppercase;outline:none}
+.wadd button{background:var(--acc);border:0;border-radius:4px;padding:5px 10px;color:#fff;cursor:pointer}
+.info{padding:10px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)} .info .big{font-size:20px;color:#fff;font-weight:600}
+#bar{grid-column:1/4;display:flex;align-items:center;gap:14px;padding:0 10px;background:var(--panel);border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+#bar .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:5px} #bar .live .dot{background:var(--up);box-shadow:0 0 6px var(--up)}
+.up{color:var(--up)} .down{color:var(--down)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50} .modal.show{display:flex}
+.dlg{width:min(720px,94vw);height:min(560px,88vh);background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.dlg header{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.dlg header h2{margin:0;font-size:15px} .dlg header input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 10px;outline:none}
+.dlg header .close{cursor:pointer;color:var(--muted);font-size:18px;padding:0 4px}
+.dlg .body{display:flex;flex:1;min-height:0}
+.cats{width:170px;border-right:1px solid var(--line);padding:6px 0;overflow-y:auto} .cats div{padding:8px 14px;cursor:pointer;color:var(--muted)} .cats div.on,.cats div:hover{color:#fff;background:var(--hover)}
+.ilist{flex:1;overflow-y:auto;padding:4px 0} .irow{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;cursor:pointer} .irow:hover{background:var(--hover)}
+.irow .d{color:var(--muted);font-size:11px} .irow .add{color:#5b8cff;font-weight:600;white-space:nowrap}
+.cfgdlg{width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.cfgdlg h2{margin:0 0 10px;font-size:14px} .cfgdlg label{display:flex;justify-content:space-between;align-items:center;margin:8px 0;gap:10px} .cfgdlg label.col{flex-direction:column;align-items:stretch}
+.cfgdlg input{width:110px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:5px 7px;outline:none} .cfgdlg input[type=text]{width:100%}
+.cfgdlg .btns{display:flex;justify-content:flex-end;gap:8px;margin-top:12px} .cfgdlg button{border:0;border-radius:5px;padding:6px 14px;cursor:pointer;background:var(--hover)} .cfgdlg button.pri{background:var(--acc);color:#fff}
+#mnav{display:none}
+/* ---------- телефон и Telegram: график на весь экран, вкладки снизу, инструменты — выезжающей полосой ---------- */
+@media (max-width:980px){
+  .app{grid-template-columns:1fr;grid-template-rows:44px 1fr 56px;height:100dvh}
+  .logo,#bar{display:none} #top{grid-column:1/2;gap:2px;padding:0 4px} .symbox input{width:96px}
+  #charts{grid-column:1;grid-row:2}
+  #tools{display:none;position:fixed;left:0;right:0;bottom:56px;flex-direction:row;overflow-x:auto;z-index:40;padding:6px;border-right:0;border-top:1px solid var(--line);box-shadow:0 -8px 20px rgba(0,0,0,.4)}
+  body.tools-open #tools{display:flex} .tsep{width:1px;height:26px;margin:0 4px}
+  .tool{width:42px;height:42px} .tool svg{width:22px;height:22px}
+  #side{display:none;position:fixed;left:0;right:0;top:44px;bottom:56px;z-index:30;border-left:0}
+  body.side-open #side{display:flex} #side .tabs{display:none}
+  #mnav{display:flex;grid-row:3;grid-column:1;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  #mnav button{flex:1;background:transparent;border:0;color:var(--muted);font-size:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 0;cursor:pointer}
+  #mnav button b{font-size:18px;font-weight:400;line-height:1} #mnav button.on{color:#5b8cff}
+  #legend{max-width:calc(100% - 84px);font-size:11px} #legend .row:nth-child(2){max-height:44px;overflow:hidden}
+  #lvl{right:8px;width:min(270px,82vw)} #tip{min-width:180px;font-size:11px}
+  .tb{padding:6px 6px} #tfs .tb{padding:6px 5px}
+  .dlg .body{flex-direction:column} .cats{width:auto;display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:0} .cats div{white-space:nowrap;padding:8px 10px}
+  #toasts{bottom:66px;right:8px;left:8px;max-width:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="top">
+    <div class="logo">◉ <b>Orbis</b><i>terminal</i></div>
+    <div class="symbox">
+      <select id="ex" title="Биржа"><option value="binance">Binance</option><option value="bybit">Bybit</option><option value="okx">OKX</option><option value="coinbase">Coinbase</option><option value="kraken">Kraken</option></select>
+      <input id="sym" list="symlist" value="BTC/USDT" spellcheck="false" title="Пара: БАЗА/КОТИРОВКА и Enter"><datalist id="symlist"></datalist>
+    </div>
+    <div class="vsep"></div><div id="tfs" style="display:flex"></div><div class="vsep"></div>
+    <select id="ctype" class="tb" title="Тип графика" style="background:transparent;border:0">
+      <option value="candle">🕯 Свечи</option><option value="hollow">◻ Полые свечи</option><option value="bar">┤ Бары</option>
+      <option value="ha">🕯 Хейкин-Аши</option><option value="line">📈 Линия</option><option value="area">▨ Область</option>
+    </select>
+    <button class="tb" id="btnInd">ƒx Индикаторы</button><button class="tb" id="btnVol" title="Объём">▮<span class="lbl"> Объём</span></button><div class="vsep"></div>
+    <button class="tb" id="btnCmp" title="Сравнить с другой монетой">⇄<span class="lbl"> Сравнить</span></button>
+    <button class="tb" id="btnLiq" title="Карта уровней ликвидаций (оценка по фьючерсам Binance, как у Coinglass)">💧<span class="lbl"> Ликвидации</span></button><div class="vsep"></div>
+    <button class="tb" id="btnReplay" title="Повтор истории: откатить график назад и проигрывать свечи по одной (тренировка)">⏪<span class="lbl"> Повтор</span></button>
+    <button class="tb" id="btnAn" title="Скопировать разметку графика (линии, уровни, сделки) точными числами — чтобы обсудить с ИИ или другим трейдером">📤<span class="lbl"> Экспорт разметки</span></button><div class="vsep"></div>
+    <button class="tb" id="btnGrid" title="Несколько графиков на экране: 1 / 2 / 3 / 4">▦</button><button class="tb" id="btnShot" title="Снимок графика (PNG)">📷</button><button class="tb" id="btnFit" title="Показать всё">⤢</button><button class="tb" id="btnFull" title="Во весь экран">⛶</button><button class="tb" id="btnTheme" title="Оформление: фон, сетка, цвета свечей">🎨</button><button class="tb" id="btnHelp" title="Горячие клавиши и подсказки (?)">?</button>
+  </div>
+  <div id="tools"></div>
+  <div id="charts">
+    <div id="mainPane"><canvas id="overlay"></canvas><div id="legend"></div><div id="status">загрузка…</div><div id="hint"></div><div id="tip"></div><div id="lvl"></div><div id="liqInfo"></div></div>
+    <div id="panes"></div>
+  </div>
+  <div id="side">
+    <div class="tabs"><button data-tab="brief" title="Главное о выбранной монете: тренд, волатильность, объём, фьючерсы, настроение">Обзор</button><button data-tab="ctx" title="Акции, облигации, доллар, нефть и золото рядом с криптой">Рынки мира</button><button data-tab="watch" title="Список избранных монет и оповещения о цене">Избранное</button><button data-tab="pm" title="Рынки предсказаний Polymarket на цену монеты">Polymarket</button><button data-tab="strat" title="Проверка торговой идеи на истории">Тестер</button><button data-tab="data" title="Выгрузка свечей и индикаторов в CSV / JSON">Экспорт</button></div>
+    <div class="tabbody" id="tab-watch">
+      <div id="wlist"></div>
+      <div class="wadd"><input id="wnew" placeholder="Добавить: TON/USDT"><button id="wbtn">+</button></div>
+      <div class="info" id="info"></div>
+      <div class="sec"><h4>🔔 Оповещения</h4>
+        <div id="alList"></div>
+        <div class="alform"><select id="alType"><option value="cross">пересечёт</option><option value="above">выше</option><option value="below">ниже</option></select><input id="alLevel" placeholder="цена"><button class="btn sm pri" id="alAdd">+</button></div>
+        <div class="alform"><input id="alExpr" list="suggest" placeholder="условие: rsi(close,14) < 30"><button class="btn sm pri" id="alFAdd">+</button></div>
+        <div class="k small">Срабатывают один раз: звук, уведомление и окно. Пока открыт терминал: текущая монета — в реальном времени, остальные — раз в 10 с (цены Binance). Условие проверяется на закрытии свечи текущего таймфрейма.</div>
+      </div>
+    </div>
+    <div class="tabbody" id="tab-brief"><div id="briefBody"></div></div>
+    <div class="tabbody" id="tab-ctx"><div id="ctxBody"></div></div>
+    <div class="tabbody" id="tab-pm"><div id="pmBody"></div></div>
+    <div class="tabbody" id="tab-strat">
+      <div class="sec">
+        <div class="seg" id="stMode" data-mode="build"><button data-m="build">🧩 Конструктор</button><button data-m="code">⌨ Сценарий</button><button data-m="events">📊 События</button></div>
+        <div id="stEvents" style="display:none">
+          <div class="k small" style="margin-top:8px">Что было с ценой после всех таких случаев в истории — без правил входа и выхода.</div>
+          <select id="evPreset" style="width:100%;max-width:none;margin-top:6px"></select>
+          <label class="col">Событие (формула)<input id="evExpr" type="text" list="suggest"></label>
+          <button class="btn sm" id="evFromScript">← взять условие входа из конструктора/сценария</button>
+          <label>Глубина истории<select id="evDepth"><option value="loaded">загруженная</option><option value="1">1 год</option><option value="3">3 года</option><option value="max">вся (с 2017)</option></select></label>
+          <label>Монеты<select id="evCoins"><option value="one">текущая</option><option value="multi">6 монет</option></select></label>
+          <label class="col">Через сколько баров смотреть<input id="evH" type="text" value="1, 6, 24, 72, 168"></label>
+          <button class="btn pri" id="evRun" style="margin-top:6px">▶ Изучить события</button>
+          <div id="evOut" style="margin-top:8px"></div>
+        </div>
+        <select id="stPreset" style="width:100%;max-width:none;margin-top:8px"></select>
+        <div id="stBuild">
+          <div class="bh">Вход в лонг <select id="bLEJ"><option value="and">все условия (И)</option><option value="or">любое (ИЛИ)</option></select></div><div id="bLE"></div><button class="btn sm" id="bLEAdd">+ условие</button>
+          <div class="bh">Выход из лонга <select id="bLXJ"><option value="or">любое (ИЛИ)</option><option value="and">все (И)</option></select></div><div id="bLX"></div><button class="btn sm" id="bLXAdd">+ условие</button>
+          <div class="bh">Вход в шорт <select id="bSEJ"><option value="and">все условия (И)</option><option value="or">любое (ИЛИ)</option></select></div><div id="bSE"></div><button class="btn sm" id="bSEAdd">+ условие</button>
+          <div class="bh">Выход из шорта <select id="bSXJ"><option value="or">любое (ИЛИ)</option><option value="and">все (И)</option></select></div><div id="bSX"></div><button class="btn sm" id="bSXAdd">+ условие</button>
+          <div class="grid2">
+            <label>Стоп, %<input id="bStop" type="number" step="any" min="0" placeholder="—"></label><label>Тейк, %<input id="bTake" type="number" step="any" min="0" placeholder="—"></label>
+            <label>Трейлинг, %<input id="bTrail" type="number" step="any" min="0" placeholder="—"></label><label>Стоп, ATR×<input id="bStopAtr" type="number" step="any" min="0" placeholder="—"></label>
+            <label>Выход через N баров<input id="bMax" type="number" step="1" min="0" placeholder="—"></label><label>Комиссия, %<input id="bFee" type="number" step="any" min="0" value="0.1"></label>
+          </div>
+          <button class="btn sm" id="stToCode">→ открыть как сценарий</button>
+        </div>
+        <div id="stCode" style="display:none">
+          <textarea id="stScript" spellcheck="false" rows="12"></textarea>
+          <div class="k small" id="stHelp"></div>
+        </div>
+        <div id="stTrade">
+          <div style="margin-top:8px"><button class="btn pri" id="stRun">▶ Проверить на истории</button><button class="btn" id="stMultiBtn" title="Те же правила на BTC, ETH, SOL, XRP, BNB, DOGE">🔁 На 6 монетах</button></div>
+          <div><button class="btn" id="stMore">+ история (5000 баров)</button><button class="btn" id="stClear">Очистить</button></div>
+          <div class="k small" id="stInfo" style="margin-top:4px"></div>
+        </div>
+      </div>
+      <div class="sec" id="stOut"></div>
+      <div class="sec" id="stMulti"></div>
+      <div class="sec"><details><summary>🧾 История проверок: <b id="tlCount">0</b> за 7 дней</summary>
+        <div class="k small" style="margin:4px 0">Каждая проверка ужесточает планку для следующих: чем больше вариантов перебрано, тем вероятнее случайная «удача». Счётчик не обнуляется при перезагрузке.</div>
+        <div id="tlList"></div><button class="btn sm" id="tlClear">Очистить</button></details></div>
+      <div class="note">Можно проверить почти любую стратегию: несколько условий, свои переменные, лонг и шорт с разворотом, стопы в % и по ATR, трейлинг, выход по времени, а в условиях — цена, 35 индикаторов, финансирование фьючерсов, открытый интерес, премия Coinbase, волатильность опционов, VIX, S&P 500 и доходности. Честная проверка: сравнение со случайными входами той же длины, половины сделок, поправка на число прогонов и проверка на 6 монетах.</div>
+      <datalist id="suggest"></datalist>
+    </div>
+    <div class="tabbody" id="tab-data">
+      <div class="sec"><h4>Текущий график</h4><div class="k small">Все загруженные свечи + значения всех индикаторов на графике</div>
+        <button class="btn" id="xCsv">⬇ CSV (Excel)</button><button class="btn" id="xJson">⬇ JSON для ИИ</button><button class="btn" id="xDraw">⬇ Рисунки</button><button class="btn" id="xTrades">⬇ Сделки теста</button></div>
+      <div class="sec"><h4>Большая обогащённая выгрузка</h4>
+        <label>Биржа<select id="xEx"></select></label><label>Пара<input id="xSym" type="text" style="width:120px;text-transform:uppercase"></label>
+        <label>Таймфрейм<select id="xTf"></select></label><label>С<input id="xFrom" type="date"></label><label>По<input id="xTo" type="date"></label>
+        <div class="bh">Внешние данные (по каждой свече)</div><div class="chks" id="xExtras"></div>
+        <div class="bh">Индикаторы</div><label class="chk"><input type="checkbox" id="xIndsChart" checked> все индикаторы с графика</label>
+        <details><summary class="k small">+ добавить другие индикаторы</summary><div class="chks" id="xInds"></div></details>
+        <label>Формат<select id="xFmt"><option value="csv">CSV (Excel)</option><option value="json">JSON для ИИ (с описанием колонок)</option></select></label>
+        <div class="k small" id="xEst"></div><button class="btn pri" id="xBig">⬇ Выгрузить</button><div class="k small" id="xBigInfo"></div></div>
+      <div class="sec"><h4>Polymarket по текущей монете</h4>
+        <div class="k small">Цены толпы против расчётной модели и опционов Deribit — по каждому открытому рынку</div>
+        <button class="btn" id="pmNow">⬇ Рынки сейчас: толпа / модель / опционы</button>
+        <label>История цен толпы за, дней<input id="pmDays" type="number" value="7" min="1" max="30"></label>
+        <button class="btn" id="pmHist">⬇ История цен толпы</button><div class="k small" id="pmXInfo"></div></div>
+      <div class="sec"><h4>Свой индикатор формулой</h4>
+        <label class="col">Название<input id="fName" type="text" value="Разница EMA"></label>
+        <label class="col">Формула<input id="fExpr" type="text" value="ema(close,9) - ema(close,21)"></label>
+        <label style="justify-content:flex-start"><input id="fPane" type="checkbox" checked style="width:auto"> в отдельной панели</label>
+        <button class="btn" id="fTest">Проверить</button><button class="btn pri" id="fAdd">+ На график</button><div id="fMsg" class="small"></div>
+        <div class="k small" id="fHelp" style="margin-top:6px"></div>
+        <div class="k small" style="margin-top:6px">Формулу можно использовать и как условие во вкладке «Тестер», например <code>rsi(close,14) &lt; 30 and close &gt; sma(close,200)</code>.</div></div>
+    </div>
+  </div>
+  <div id="bar"><span id="conn"><span class="dot"></span>—</span><span id="barsinfo"></span><span style="margin-left:auto" id="clock"></span></div>
+  <div id="mnav">
+    <button data-m="chart" class="on"><b>📈</b>График</button><button data-m="draw"><b>✎</b>Рисовать</button><button data-m="brief"><b>🧭</b>Обзор</button><button data-m="ctx"><b>🌐</b>Мир</button><button data-m="watch"><b>⭐</b>Избранное</button>
+    <button data-m="pm"><b>🎯</b>Polymarket</button><button data-m="strat"><b>🧪</b>Тестер</button><button data-m="data"><b>💾</b>Экспорт</button>
+  </div>
+</div>
+<div class="modal" id="indModal"><div class="dlg">
+  <header><h2>Индикаторы</h2><input id="indSearch" placeholder="Поиск: RSI, MACD, Ишимоку…"><span class="close" id="indClose">✕</span></header>
+  <div class="body"><div class="cats" id="indCats"></div><div class="ilist" id="indList"></div></div></div></div>
+<div class="modal" id="cfgModal"><div class="cfgdlg" id="cfgBox"></div></div>
+<div class="modal" id="anModal"><div class="cfgdlg" id="anBox" style="width:min(520px,94vw)"></div></div>
+<div class="modal" id="helpModal"><div class="cfgdlg" style="width:min(620px,94vw);max-height:90vh;overflow-y:auto">
+  <h2 style="display:flex;justify-content:space-between">Горячие клавиши и подсказки <span class="close x">✕</span></h2>
+  <div class="hk"><b>Alt+T</b> линия тренда <b>Alt+Y</b> луч <b>Alt+H</b> горизонтальный уровень <b>Alt+V</b> вертикаль <b>Alt+C</b> канал <b>Alt+R</b> прямоугольник
+  <b>Alt+A</b> стрелка <b>Alt+F</b> Фибоначчи <b>Alt+E</b> волны Эллиотта <b>Alt+M</b> линейка <b>Alt+X</b> текст<br>
+  <b>Alt+L</b> лонг <b>Alt+S</b> шорт <b>Alt+B</b> кисть <b>Alt+P</b> вилы Эндрюса <b>Alt+N</b> выноска · <b>Shift</b> при рисовании — ровно 0°/45°/90° · <b>Ctrl+D</b> копия выделенного<br>
+  Выделенный рисунок: панель сверху — цвет, толщина, пунктир, подпись (Aa), 🔒 закрепить, ⧉ копия, 🗑 удалить. ☰ слева — список всех объектов.<br>
+  «📤 Экспорт разметки» — вся разметка точными числами в буфер обмена (вставить в чат с ИИ или другим трейдером).<br>
+  <b>⏪ Повтор</b> — клик по свече, дальше ▶ / ⏭ (пробел — пуск/пауза, Shift+→ — следующая свеча). <b>Правый клик</b> по графику — меню: уровень, оповещение, лонг/шорт отсюда, повтор с этой свечи; по рисунку — копия, замок, стиль по умолчанию.<br>
+  Клавиатура: начните печатать буквы — поиск монеты (Esc — отмена); <b>← →</b> прокрутка (с Shift — быстрее), <b>+ −</b> зум, <b>Home</b> — к последней свече, <b>Ctrl+Y</b> — повторить отменённое.
+  Цвет/толщина/пунктир, выбранные на панели, запоминаются для этого инструмента.<br>
+  <b>▦</b> — несколько графиков (2, 3 или 4): у доп. графиков своя пара и таймфрейм, ⤢ — сделать главным.<span class="tg-only"> <b>📲</b> у оповещения (или в меню правого клика) — перенести его в Telegram-бота: сработает, даже если терминал закрыт (в боте: /alerts — список, /alertdel N — удалить).</span><br>
+  Панели: <b>Alt+]</b> скрыть/показать правую панель, <b>Alt+[</b> — полосу инструментов; ширину правой панели меняйте, потянув за её левый край (двойной клик — обычная ширина).
+  Панели индикаторов: тянуть за верхнюю границу — высота; ▲▼ — порядок; ▁ — свернуть; ⤢ или двойной клик по заголовку — развернуть.<br>
+  <b>Ctrl+Z</b> отменить изменение рисунков <b>Delete</b> удалить выделенный рисунок <b>Esc</b> отмена / закрыть окно <b>?</b> эта справка</div>
+  <div class="k small" style="margin-top:10px;line-height:1.55">
+  • Колёсико — масштаб, перетаскивание — прокрутка; прокрутите влево — подгрузится старая история.<br>
+  • Выделите горизонтальный уровень — увидите, как часто цена от него отбивалась, и сможете поставить оповещение.<br>
+  • «Тестер»: конструктор без формул, сценарий для сложных идей, «События» — что было после таких случаев на годах истории.<br>
+  • «⇄ Сравнить» — другая монета поверх графика (шкала слева в %).<br>
+  • Терминал только показывает данные: ключей бирж и торговли в нём нет, всё считается в вашем браузере.</div>
+  <h2 style="margin-top:14px">Словарь терминов</h2>
+  <div class="gl">
+  <b>Лонг / шорт</b><span>Ставка на рост / на падение цены.</span>
+  <b>EMA 50 / 200</b><span>Средняя цена за 50 / 200 последних свечей, свежие свечи весят больше. Цена выше EMA 200 — обычно восходящий тренд.</span>
+  <b>AVWAP</b><span>Средняя цена с учётом объёма от выбранной точки: «по какой цене в среднем купили участники с этого момента».</span>
+  <b>ATR</b><span>Средний размах свечи (ход цены за период). Помогает выбрать стоп: стоп короче одного ATR обычно выбивает случайным шумом.</span>
+  <b>RVOL</b><span>Объём относительно обычного: ×2 — вдвое больше среднего. Пробои на высоком объёме чаще настоящие.</span>
+  <b>CVD</b><span>Накопленная разница рыночных покупок и продаж. Растёт — агрессивнее покупают, падает — продают.</span>
+  <b>Фандинг</b><span>Плата между лонгами и шортами на бессрочных фьючерсах каждые 8 ч. Плюс — платят лонги (их больше), минус — шорты. +0.01% на Binance — норма.</span>
+  <b>Открытый интерес</b><span>Сколько всего открыто фьючерсных позиций. Растёт вместе с ценой — в движение приходят новые деньги.</span>
+  <b>Ликвидации</b><span>Принудительное закрытие позиций с плечом, когда убыток съел залог. Карта показывает, где их много (оценка по данным биржи).</span>
+  <b>Дисбаланс (FVG)</b><span>Участок резкого движения, где цена прошла почти без сделок в обе стороны; цена часто возвращается к нему.</span>
+  <b>Премия Coinbase</b><span>Насколько BTC на Coinbase дороже, чем на Binance. Плюс — активнее покупают в США.</span>
+  <b>DVOL</b><span>Ожидаемая волатильность BTC/ETH по опционам Deribit — «индекс страха» крипты.</span>
+  <b>Polymarket</b><span>Рынок предсказаний: цена 30¢ ≈ толпа считает вероятность события 30%. п.п. — процентные пункты.</span>
+  <b>Таймфрейм</b><span>Период одной свечи: 1м, 1ч, 1Д и т.д.</span>
+  </div>
+  <div class="k small" style="margin-top:12px;line-height:1.5">Orbis — инструмент для анализа и обучения. Ничто в нём не является инвестиционной рекомендацией. Данные берутся из публичных источников (Binance, Bybit, OKX, Coinbase, Kraken, Deribit, Hyperliquid, Polymarket и др.) и могут запаздывать или ошибаться. Графики — <a href="https://www.tradingview.com/lightweight-charts/" target="_blank" rel="noopener" style="color:#5b8cff">TradingView Lightweight Charts</a>.</div>
+</div></div>
+<div id="toasts"></div>
+<script src="js/client.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/indicators.js"></script>
+<script src="js/app.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/side.js"></script>
+<script src="js/liq.js"></script>
+<script src="js/drawui.js"></script>
+<script src="js/pro.js"></script>
+<script src="js/multi.js"></script>
+<script src="js/brief.js"></script>
+<script src="js/context.js"></script>
+</body>
+</html>
